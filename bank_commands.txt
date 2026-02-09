@@ -1,0 +1,128 @@
+===============================
+BANK BACKEND – COMMAND CHEAT SHEET
+===============================
+
+# Assumption:
+# - Backend server runs on localhost:8000
+# - app.py already exists
+# - Virtual environment is activated
+
+------------------------------------------------
+START BANK BACKEND SERVER
+------------------------------------------------
+python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
+
+------------------------------------------------
+HEALTH CHECK – IS BANK RUNNING?
+------------------------------------------------
+curl http://localhost:8000
+
+Expected Output:
+{"status":"Bank backend is running"}
+
+------------------------------------------------
+CREATE CUSTOMER
+------------------------------------------------
+curl -X POST "http://localhost:8000/customers?name=Ravi"
+
+------------------------------------------------
+VIEW ALL CUSTOMERS
+------------------------------------------------
+curl http://localhost:8000/customers
+
+Expected Output Example:
+{
+  "customers": [
+    {"id":1,"name":"Ravi"},
+    {"id":2,"name":"Kumar"}
+  ]
+}
+
+------------------------------------------------
+CREATE ACCOUNT (USING CUSTOMER ID)
+------------------------------------------------
+curl -X POST "http://localhost:8000/accounts?customer_id=1"
+
+------------------------------------------------
+VIEW ALL ACCOUNTS
+------------------------------------------------
+curl http://localhost:8000/accounts
+
+Expected Output Example:
+{
+  "accounts": [
+    {"account_id":1,"customer_id":1,"balance":0}
+  ]
+}
+
+------------------------------------------------
+DEPOSIT MONEY
+------------------------------------------------
+curl -X POST "http://localhost:8000/deposit?account_id=1&amount=1000"
+
+Expected Output:
+{
+  "message":"Deposit successful",
+  "account_id":1,
+  "balance":1000
+}
+
+------------------------------------------------
+WITHDRAW MONEY
+------------------------------------------------
+curl -X POST "http://localhost:8000/withdraw?account_id=1&amount=300"
+
+Expected Output:
+{
+  "message":"Withdrawal successful",
+  "account_id":1,
+  "balance":700
+}
+
+------------------------------------------------
+TEST INSUFFICIENT BALANCE
+------------------------------------------------
+curl -X POST "http://localhost:8000/withdraw?account_id=1&amount=5000"
+
+Expected Output:
+{"error":"Insufficient balance"}
+
+------------------------------------------------
+CHECK ACCOUNT BALANCE
+------------------------------------------------
+curl "http://localhost:8000/balance?account_id=1"
+
+Expected Output:
+{
+  "account_id":1,
+  "balance":700
+}
+
+------------------------------------------------
+VIEW APPLICATION LOGS
+------------------------------------------------
+cat logs/bank.log
+
+------------------------------------------------
+LIVE LOG MONITORING (DEVOPS)
+------------------------------------------------
+tail -f logs/bank.log
+
+------------------------------------------------
+STOP BANK SERVER
+------------------------------------------------
+CTRL + C
+
+------------------------------------------------
+REAL BANKING FLOW
+------------------------------------------------
+1. Create Customer
+2. Get Customer ID
+3. Create Account using Customer ID
+4. Deposit Money
+5. Withdraw Money
+6. Check Balance
+
+------------------------------------------------
+END OF FILE
+------------------------------------------------
