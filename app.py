@@ -1,167 +1,127 @@
-from fastapi import FastAPI
-import logging
-import os
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import sqlite3
 
-# -----------------------
-# APPLICATION SETUP
-# -----------------------
 app = FastAPI()
+DB = "bank.db"
 
-# Create logs directory
-os.makedirs("logs", exist_ok=True)
+def get_db():
+    return sqlite3.connect(DB)
 
-# Logging configuration
-logging.basicConfig(
-    filename="logs/bank.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+# ---------------- DB INIT ----------------
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
 
-# -----------------------
-# DATABASE SETUP
-# -----------------------
-conn = sqlite3.connect("bank.db", check_same_thread=False)
-cursor = conn.cursor()
-
-# Create customers table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS customers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT
-)
-""")
-
-# Create accounts table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER,
-    balance INTEGER
-)
-""")
-
-conn.commit()
-
-# -----------------------
-# APIs
-# -----------------------
-
-# Health Check
-@app.get("/")
-def health_check():
-    logging.info("Health check called")
-    return {"status": "Bank backend is running"}
-
-# Create Customer
-@app.post("/customers")
-def create_customer(name: str):
-    cursor.execute("INSERT INTO customers (name) VALUES (?)", (name,))
-    conn.commit()
-    logging.info(f"Customer created: {name}")
-    return {"message": "Customer created successfully"}
-
-# Get All Customers
-@app.get("/customers")
-def get_customers():
-    cursor.execute("SELECT * FROM customers")
-    rows = cursor.fetchall()
-    logging.info("Fetched all customers")
-    return {
-        "customers": [
-            {"id": row[0], "name": row[1]} for row in rows
-        ]
-    }
-
-# Create Account
-@app.post("/accounts")
-def create_account(customer_id: int):
-    cursor.execute(
-        "INSERT INTO accounts (customer_id, balance) VALUES (?, ?)",
-        (customer_id, 0)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT
     )
-    conn.commit()
-    logging.info(f"Account created for customer {customer_id}")
-    return {"message": "Account created successfully"}
+    """)
 
-# Get All Accounts
-@app.get("/accounts")
-def get_accounts():
-    cursor.execute("SELECT * FROM accounts")
-    rows = cursor.fetchall()
-    logging.info("Fetched all accounts")
-    return {
-        "accounts": [
-            {
-                "account_id": row[0],
-                "customer_id": row[1],
-                "balance": row[2]
-            }
-            for row in rows
-        ]
-    }
-
-# Deposit Money
-@app.post("/deposit")
-def deposit(account_id: int, amount: int):
-    cursor.execute("SELECT balance FROM accounts WHERE id = ?", (account_id,))
-    row = cursor.fetchone()
-
-    if not row:
-        return {"error": "Account not found"}
-
-    new_balance = row[0] + amount
-    cursor.execute(
-        "UPDATE accounts SET balance = ? WHERE id = ?",
-        (new_balance, account_id)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        balance REAL DEFAULT 0,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )
+    """)
+
+    # Default admin
+    cur.execute("SELECT * FROM users WHERE username='admin'")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO users VALUES (NULL,'admin','admin','admin')")
+
     conn.commit()
+    conn.close()
 
-    logging.info(f"Deposited {amount} to account {account_id}")
-    return {
-        "message": "Deposit successful",
-        "account_id": account_id,
-        "balance": new_balance
-    }
+init_db()
 
-# Withdraw Money
-@app.post("/withdraw")
-def withdraw(account_id: int, amount: int):
-    cursor.execute("SELECT balance FROM accounts WHERE id = ?", (account_id,))
-    row = cursor.fetchone()
+# ---------------- FRONTEND ----------------
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
-    if not row:
-        return {"error": "Account not found"}
+@app.get("/", response_class=HTMLResponse)
+def login_page():
+    return open("frontend/login.html").read()
 
-    if row[0] < amount:
-        logging.warning(f"Insufficient funds for account {account_id}")
-        return {"error": "Insufficient balance"}
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page():
+    return open("frontend/admin.html").read()
 
-    new_balance = row[0] - amount
-    cursor.execute(
-        "UPDATE accounts SET balance = ? WHERE id = ?",
-        (new_balance, account_id)
-    )
-    conn.commit()
+@app.get("/customer", response_class=HTMLResponse)
+def customer_page():
+    return open("frontend/customer.html").read()
 
-    logging.info(f"Withdrawn {amount} from account {account_id}")
-    return {
-        "message": "Withdrawal successful",
-        "account_id": account_id,
-        "balance": new_balance
-    }
+# ---------------- AUTH ----------------
+@app.post("/login")
+def login(username: str, password: str):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, role FROM users WHERE username=? AND password=?", (username, password))
+    user = cur.fetchone()
+    conn.close()
 
-# Balance Enquiry
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return {"user_id": user[0], "role": user[1]}
+
+# ---------------- ADMIN ----------------
+@app.post("/admin/create-user")
+def create_user(username: str, password: str):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO users VALUES (NULL,?,?,?)", (username, password, "customer"))
+        user_id = cur.lastrowid
+        cur.execute("INSERT INTO accounts VALUES (NULL,?,0)", (user_id,))
+        conn.commit()
+    except:
+        raise HTTPException(status_code=400, detail="User exists")
+    finally:
+        conn.close()
+
+    return {"message": "Customer created"}
+
+# ---------------- CUSTOMER ----------------
 @app.get("/balance")
-def get_balance(account_id: int):
-    cursor.execute("SELECT balance FROM accounts WHERE id = ?", (account_id,))
-    row = cursor.fetchone()
+def balance(user_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM accounts WHERE user_id=?", (user_id,))
+    bal = cur.fetchone()
+    conn.close()
 
-    if not row:
-        return {"error": "Account not found"}
+    if not bal:
+        raise HTTPException(status_code=404, detail="Account not found")
 
-    logging.info(f"Balance checked for account {account_id}")
-    return {
-        "account_id": account_id,
-        "balance": row[0]
-    }
+    return {"balance": bal[0]}
+
+@app.post("/deposit")
+def deposit(user_id: int, amount: float):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE accounts SET balance=balance+? WHERE user_id=?", (amount, user_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Deposit successful"}
+
+@app.post("/withdraw")
+def withdraw(user_id: int, amount: float):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM accounts WHERE user_id=?", (user_id,))
+    bal = cur.fetchone()
+
+    if bal[0] < amount:
+        raise HTTPException(status_code=400, detail="Insufficient funds")
+
+    cur.execute("UPDATE accounts SET balance=balance-? WHERE user_id=?", (amount, user_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Withdrawal successful"}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<style>
+body {font-family: Arial; background:#222; color:white; text-align:center;}
+.card {background:#333; padding:20px; width:300px; margin:100px auto;}
+input,button {width:90%; padding:10px; margin:10px;}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>🏦 Bank Login</h2>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="msg"></p>
+</div>
+
+<script>
+function login(){
+fetch(`/login?username=${u.value}&password=${p.value}`,{method:'POST'})
+.then(r=>r.json())
+.then(d=>{
+if(d.role=="admin") location.href="/admin";
+else {
+localStorage.setItem("user_id",d.user_id);
+location.href="/customer";
+}
+})
+.catch(()=>msg.innerText="Invalid login");
+}
+</script>
+</body>
+</html>

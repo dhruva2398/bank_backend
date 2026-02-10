@@ -1,0 +1,23 @@
+<h2>Customer Dashboard</h2>
+<button onclick="bal()">Check Balance</button>
+<input id="amt" placeholder="Amount">
+<button onclick="dep()">Deposit</button>
+<button onclick="wit()">Withdraw</button>
+<p id="out"></p>
+
+<script>
+let uid=localStorage.getItem("user_id");
+
+function bal(){
+fetch(`/balance?user_id=${uid}`).then(r=>r.json())
+.then(d=>out.innerText="Balance: ₹"+d.balance);
+}
+function dep(){
+fetch(`/deposit?user_id=${uid}&amount=${amt.value}`,{method:'POST'})
+.then(r=>r.json()).then(d=>out.innerText=d.message);
+}
+function wit(){
+fetch(`/withdraw?user_id=${uid}&amount=${amt.value}`,{method:'POST'})
+.then(r=>r.json()).then(d=>out.innerText=d.message||d.detail);
+}
+</script>

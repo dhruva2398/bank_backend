@@ -1,0 +1,12 @@
+<h2>Admin Panel</h2>
+<input id="u" placeholder="Customer name">
+<input id="p" placeholder="Password">
+<button onclick="add()">Create Customer</button>
+<p id="r"></p>
+
+<script>
+function add(){
+fetch(`/admin/create-user?username=${u.value}&password=${p.value}`,{method:'POST'})
+.then(r=>r.json()).then(d=>r.innerText=d.message||d.detail);
+}
+</script>
