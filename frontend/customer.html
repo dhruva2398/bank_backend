@@ -1,23 +1,139 @@
-<h2>Customer Dashboard</h2>
-<button onclick="bal()">Check Balance</button>
-<input id="amt" placeholder="Amount">
-<button onclick="dep()">Deposit</button>
-<button onclick="wit()">Withdraw</button>
-<p id="out"></p>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .container {
+            width: 90%;
+            margin: 30px auto;
+        }
+
+        .card {
+            background: white;
+            color: black;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #11998e;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0d7f70;
+        }
+
+        input {
+            padding: 10px;
+            margin: 10px;
+            width: 200px;
+        }
+
+        #out {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>👤 Customer Dashboard</div>
+        <div>
+            <span id="profileName"></span>
+            <button onclick="logout()">Sign Out</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+
+    <div class="card">
+        <h3>Account Balance</h3>
+        <button onclick="bal()">Check Balance</button>
+        <p id="out"></p>
+    </div>
+
+    <div class="card">
+        <h3>Transaction</h3>
+        <input id="amt" placeholder="Enter Amount">
+        <br>
+        <button onclick="dep()">Deposit</button>
+        <button onclick="wit()">Withdraw</button>
+    </div>
+
+</div>
 
 <script>
-let uid=localStorage.getItem("user_id");
+let uid = localStorage.getItem("user_id");
+let username = localStorage.getItem("username");
+
+if(!uid){
+    window.location = "/";
+}
+
+document.getElementById("profileName").innerText = "Welcome, " + username;
+
 
 function bal(){
-fetch(`/balance?user_id=${uid}`).then(r=>r.json())
-.then(d=>out.innerText="Balance: ₹"+d.balance);
+    fetch(`/balance?user_id=${uid}`)
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.success){
+            out.innerText = "Balance: ₹ " + d.data.balance;
+        }
+    });
 }
+
 function dep(){
-fetch(`/deposit?user_id=${uid}&amount=${amt.value}`,{method:'POST'})
-.then(r=>r.json()).then(d=>out.innerText=d.message);
+    fetch(`/deposit?user_id=${uid}&amount=${amt.value}`, {method:'POST'})
+    .then(r=>r.json())
+    .then(d=>{
+        out.innerText = d.message;
+    });
 }
+
 function wit(){
-fetch(`/withdraw?user_id=${uid}&amount=${amt.value}`,{method:'POST'})
-.then(r=>r.json()).then(d=>out.innerText=d.message||d.detail);
+    fetch(`/withdraw?user_id=${uid}&amount=${amt.value}`, {method:'POST'})
+    .then(r=>r.json())
+    .then(d=>{
+        out.innerText = d.message;
+    });
 }
+
+function logout(){
+    localStorage.clear();
+    window.location = "/";
+}
+
 </script>
+
+</body>
+</html>

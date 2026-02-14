@@ -9,6 +9,19 @@ DB = "bank.db"
 def get_db():
     return sqlite3.connect(DB)
 
+def get_user_role(user_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT role FROM users WHERE id=?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
+    return row[0]
+
+
 # ---------------- DB INIT ----------------
 def init_db():
     conn = get_db()
@@ -69,7 +82,15 @@ def login(username: str, password: str):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    return {"user_id": user[0], "role": user[1]}
+    return {
+        "success": True,
+        "message": "Login successful",
+        "data": {
+            "user_id": user[0],
+            "role": user[1]
+        }
+    }
+
 
 # ---------------- ADMIN ----------------
 @app.post("/admin/create-user")
@@ -100,7 +121,14 @@ def balance(user_id: int):
     if not bal:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    return {"balance": bal[0]}
+    return {
+        "success": True,
+        "message": "Balance fetched successfully",
+        "data": {
+            "balance": bal[0]
+        }
+    }
+
 
 @app.post("/deposit")
 def deposit(user_id: int, amount: float):
@@ -125,3 +153,67 @@ def withdraw(user_id: int, amount: float):
     conn.commit()
     conn.close()
     return {"message": "Withdrawal successful"}
+
+@app.get("/admin/customers")
+def list_customers(user_id: int):
+    # Step 1: Verify role
+    role = get_user_role(user_id)
+
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Step 2: Fetch users + account balance
+    cur.execute("""
+    SELECT users.id, users.username, users.role, accounts.balance
+    FROM users
+    LEFT JOIN accounts ON users.id = accounts.user_id
+    """)
+
+    rows = cur.fetchall()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Customers fetched successfully",
+        "data": [
+            {
+                "id": r[0],
+                "username": r[1],
+                "role": r[2],
+                "balance": r[3] if r[3] is not None else 0
+            }
+            for r in rows
+        ]
+    }
+
+@app.delete("/admin/delete-user")
+def delete_user(admin_id: int, user_id: int):
+    # Verify admin
+    role = get_user_role(admin_id)
+
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if user_id == admin_id:
+        raise HTTPException(status_code=400, detail="Admin cannot delete self")
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Delete account first
+    cur.execute("DELETE FROM accounts WHERE user_id=?", (user_id,))
+    
+    # Delete user
+    cur.execute("DELETE FROM users WHERE id=?", (user_id,))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "User deleted successfully",
+        "data": None
+    }
