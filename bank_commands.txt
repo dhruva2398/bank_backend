@@ -123,6 +123,91 @@ REAL BANKING FLOW
 5. Withdraw Money
 6. Check Balance
 
+
+
+
+
+#############################################
+# BANK BACKEND API TEST COMMANDS
+#############################################
+
+# ------------------------------------------
+# 1️⃣ LOGIN AS ADMIN
+# ------------------------------------------
+curl -X POST "http://localhost:8000/login?username=admin&password=admin"
+
+
+# ------------------------------------------
+# 2️⃣ CREATE NEW CUSTOMER (ADMIN ACTION)
+# ------------------------------------------
+curl -X POST "http://localhost:8000/admin/create-user?username=raju&password=1234"
+
+
+# ------------------------------------------
+# 3️⃣ LOGIN AS CUSTOMER (raju)
+# ------------------------------------------
+curl -X POST "http://localhost:8000/login?username=raju&password=1234"
+
+
+# ------------------------------------------
+# 4️⃣ CHECK BALANCE (Assume raju user_id = 2)
+# ------------------------------------------
+curl "http://localhost:8000/balance?user_id=2"
+
+
+# ------------------------------------------
+# 5️⃣ DEPOSIT 500 TO CUSTOMER
+# ------------------------------------------
+curl -X POST "http://localhost:8000/deposit?user_id=2&amount=500"
+
+
+# ------------------------------------------
+# 6️⃣ CHECK BALANCE AGAIN
+# ------------------------------------------
+curl "http://localhost:8000/balance?user_id=2"
+
+
+# ------------------------------------------
+# 7️⃣ WITHDRAW 200
+# ------------------------------------------
+curl -X POST "http://localhost:8000/withdraw?user_id=2&amount=200"
+
+
+# ------------------------------------------
+# 8️⃣ CHECK BALANCE AGAIN
+# ------------------------------------------
+curl "http://localhost:8000/balance?user_id=2"
+
+
+# ------------------------------------------
+# 9️⃣ LIST ALL CUSTOMERS (ADMIN ONLY)
+# ------------------------------------------
+curl "http://localhost:8000/admin/customers?user_id=1"
+
+
+# ------------------------------------------
+# 🔟 DELETE CUSTOMER (ADMIN ONLY)
+# ------------------------------------------
+curl -X DELETE "http://localhost:8000/admin/delete-user?admin_id=1&user_id=2"
+
+
+# ------------------------------------------
+# 1️⃣1️⃣ TRY DELETE AS CUSTOMER (SHOULD FAIL)
+# ------------------------------------------
+curl -X DELETE "http://localhost:8000/admin/delete-user?admin_id=2&user_id=3"
+
+
+# ------------------------------------------
+# 1️⃣2️⃣ WITHDRAW MORE THAN BALANCE (ERROR TEST)
+# ------------------------------------------
+curl -X POST "http://localhost:8000/withdraw?user_id=2&amount=100000"
+
+
+#############################################
+# END OF TEST COMMANDS
+#############################################
+
+
 ------------------------------------------------
 END OF FILE
 ------------------------------------------------
