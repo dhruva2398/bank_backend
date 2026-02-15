@@ -208,6 +208,156 @@ curl -X POST "http://localhost:8000/withdraw?user_id=2&amount=100000"
 #############################################
 
 
+############################################################
+# DOCKER COMMANDS - BANK BACKEND PROJECT
+############################################################
+
+
+##############################
+# IMAGE COMMANDS
+##############################
+
+# Build Docker image
+docker build -t bank-backend .
+
+# List all images
+docker images
+
+# Remove image
+docker rmi bank-backend
+
+# Remove unused images
+docker image prune
+
+
+##############################
+# CONTAINER RUNNING
+##############################
+
+# Run container (new container)
+docker run -p 8001:8000 bank-backend
+
+# Run container with name
+docker run -p 8001:8000 --name bank-app bank-backend
+
+# Run container in background (detached mode)
+docker run -d -p 8001:8000 --name bank-app bank-backend
+
+
+##############################
+# CONTAINER STATUS
+##############################
+
+# Show running containers
+docker ps
+
+# Show all containers (running + stopped)
+docker ps -a
+
+
+##############################
+# START / STOP / REMOVE
+##############################
+
+# Stop container
+docker stop bank-app
+
+# Start existing container
+docker start bank-app
+
+# Restart container
+docker restart bank-app
+
+# Remove container
+docker rm bank-app
+
+# Remove all stopped containers
+docker container prune
+
+
+##############################
+# LOGS & DEBUGGING
+##############################
+
+# Show container logs
+docker logs bank-app
+
+# Follow logs (live logs)
+docker logs -f bank-app
+
+# Inspect container details
+docker inspect bank-app
+
+# Show resource usage (CPU / Memory)
+docker stats
+
+
+##############################
+# EXEC INTO CONTAINER
+##############################
+
+# Enter container shell
+docker exec -it bank-app /bin/bash
+
+# Run command inside container
+docker exec -it bank-app ls
+
+
+##############################
+# NETWORK & PORTS
+##############################
+
+# Check port mapping
+docker ps
+
+# Inspect networking
+docker inspect bank-app
+
+# Test API from host
+curl http://localhost:8001
+
+# Test API inside container
+docker exec -it bank-app curl http://localhost:8000
+
+
+##############################
+# VOLUME (PERSIST DATABASE)
+##############################
+
+# Run container with volume mapping
+docker run -d -p 8001:8000 \
+  -v $(pwd)/data:/app \
+  --name bank-app \
+  bank-backend
+
+# List volumes
+docker volume ls
+
+# Remove unused volumes
+docker volume prune
+
+
+##############################
+# CLEANUP EVERYTHING
+##############################
+
+# Stop all containers
+docker stop $(docker ps -q)
+
+# Remove all containers
+docker rm $(docker ps -aq)
+
+# Remove all images
+docker rmi $(docker images -q)
+
+# System cleanup (VERY POWERFUL)
+docker system prune -a
+
+
+############################################################
+# END OF DOCKER COMMANDS
+############################################################
+
 ------------------------------------------------
 END OF FILE
 ------------------------------------------------
